@@ -17,17 +17,5 @@ achive
 **/.DS_Store
 
 # Terraform — never commit providers, plugins, or local state
-**/.terraform/
-*.tfstate
-*.tfstate.*
-crash.log
-crash.*.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraformrc
-terraform.rc
-
-# Keep lockfile tracked for reproducible providers:
-# !.terraform.lock.hcl
+infrastructure/terraform/.terraform.lock.hcl
+infrastructure/terraform/.terraform

@@ -54,7 +54,7 @@ ActionType = Literal["outreach", "update", "summarize"]
 
 APP_NAME = "fortified_crm"
 FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.5-flash")
-PRO_MODEL = os.getenv("GEMINI_PRO_MODEL", "gemini-3.5-pro")
+PRO_MODEL = os.getenv("GEMINI_PRO_MODEL", "gemini-2.5-pro")
 CRM_USER_ID = "crm_api"
 
 
