@@ -1,0 +1,51 @@
+name: Deploy to GKE
+
+on:
+  pull_request:
+    branches:
+      - main
+
+
+env:
+  PROJECT_ID: agentic-hackerton
+  GKE_CLUSTER: fortified-crm-fleet
+  GKE_REGION: europe-west3
+  GKE_NAMESPACE: fortified-crm-fleet
+  REPOSITORY: Fortified_CRM_Fleet
+
+jobs:
+################################################################################################### TERRAFORM VALIDATE JOBS ########################################################################################################
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: integration-test
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    defaults:
+      run:
+        working-directory: ./infrastructure/terraform
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v3'
+        with:
+          service_account: 'deployment@agentic-hackerton.iam.gserviceaccount.com'
+          workload_identity_provider: 'projects/290585277729/locations/global/workloadIdentityPools/my-github-repo-provider/providers/repository'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Validate
+        run: |
+          echo "yes" | terraform init 
+          echo "yes" | terraform plan
+          echo "yes" | terraform validate 

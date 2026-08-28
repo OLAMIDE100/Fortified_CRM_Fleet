@@ -1,0 +1,33 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+
+# Local / editor
+achive
+.cursor
+.DS_Store
+**/.DS_Store
+
+# Terraform — never commit providers, plugins, or local state
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Keep lockfile tracked for reproducible providers:
+# !.terraform.lock.hcl

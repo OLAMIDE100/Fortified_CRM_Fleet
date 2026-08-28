@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: fortified-crm-fleet-subdomian
+  namespace: fortified-crm-fleet
+spec:
+  domains:
+    - fortified-crm-fleet.wolfcore.app

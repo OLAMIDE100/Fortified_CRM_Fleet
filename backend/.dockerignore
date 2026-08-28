@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.env
+*.md
+.git
+frontend
+docs
+archive
+crm_local.db

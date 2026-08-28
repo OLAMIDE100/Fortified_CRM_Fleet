@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fortified-crm-fleet-config
+  namespace: fortified-crm-fleet
+data:
+  POSTGRES_USER: fortified-crm-fleet
+  POSTGRES_DB: fortified-crm-fleet
+  POSTGRES_HOST: 172.20.0.3
+  POSTGRES_PORT: "5432"
+  

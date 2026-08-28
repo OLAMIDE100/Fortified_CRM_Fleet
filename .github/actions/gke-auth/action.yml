@@ -1,0 +1,22 @@
+
+
+name: Google-cloud and GKE authentication
+runs:
+  using: "composite"
+  steps:
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v3'
+      with:
+        service_account: 'deployment@agentic-hackerton.iam.gserviceaccount.com'
+        workload_identity_provider: 'projects/290585277729/locations/global/workloadIdentityPools/my-github-repo-provider/providers/repository'
+
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure kubectl
+      shell: bash
+      run: |
+        gcloud components install gke-gcloud-auth-plugin
+        gcloud container clusters get-credentials fortified-crm-fleet --region europe-west3 --project agentic-hackerton
+        kubectl create namespace fortified-crm-fleet --dry-run=client -o yaml | kubectl apply -f -

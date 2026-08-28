@@ -1,0 +1,141 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: agentic-hackerton
+  GKE_CLUSTER: fortified-crm-fleet
+  GKE_REGION: europe-west3
+  GKE_NAMESPACE: fortified-crm-fleet
+  ARTIFACT_REPO: fortified-crm-fleet
+
+jobs:
+  ################################################################################################### TERRAFORM APPLY ########################################################################################################
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+      image_registry: ${{ steps.tag.outputs.registry }}
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: ./infrastructure/terraform
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          service_account: deployment@agentic-hackerton.iam.gserviceaccount.com
+          workload_identity_provider: projects/290585277729/locations/global/workloadIdentityPools/my-github-repo-provider/providers/repository
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Generate image tag
+        id: tag
+        working-directory: .
+        run: |
+          TAG=$(echo "${{ github.sha }}" | cut -c1-7)
+          REGISTRY="${{ env.GKE_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REPO }}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "registry=${REGISTRY}" >> "${GITHUB_OUTPUT}"
+          echo "Image tag: ${TAG}"
+          echo "Image registry: ${REGISTRY}"
+
+      - name: Terraform Init / Validate / Apply
+        env:
+          TF_VAR_image_tag: ${{ steps.tag.outputs.tag }}
+          TF_VAR_gcp_project_name: ${{ env.PROJECT_ID }}
+          TF_VAR_region: ${{ env.GKE_REGION }}
+        run: |
+          echo "yes" | terraform init
+          echo "yes" | terraform validate
+          terraform plan
+          terraform apply -auto-approve
+
+  ################################################################################################### DEPLOY MANIFESTS (mirrors deploy.sh) ########################################################################################################
+  deploy-manifests:
+    name: Deploy Kubernetes Manifests
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud and GKE
+        uses: ./.github/actions/gke-auth
+
+      - name: Render and apply manifests
+        env:
+          IMAGE_TAG: ${{ needs.terraform-apply.outputs.image_tag }}
+          IMAGE_REGISTRY: ${{ needs.terraform-apply.outputs.image_registry }}
+          NAMESPACE: ${{ env.GKE_NAMESPACE }}
+        run: |
+          set -euo pipefail
+
+          echo "=== Namespace setup ==="
+          kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+
+          echo "=== Render manifests (registry + tag) ==="
+          RENDER_DIR="$(mktemp -d)"
+          cp -r infrastructure/manifests/. "${RENDER_DIR}/"
+
+          # Manifests ship with europe-west3.../agentic-hackerton/...:v1.0.0 placeholders
+          # (same substitution as deploy.sh; GNU sed on ubuntu-latest).
+          find "${RENDER_DIR}" -name '*.yaml' -type f -print0 | while IFS= read -r -d '' file; do
+            sed -i \
+              "s|europe-west3-docker.pkg.dev/agentic-hackerton/fortified-crm-fleet/|${IMAGE_REGISTRY}/|g" \
+              "${file}"
+            sed -i "s|:v1.0.0|:${IMAGE_TAG}|g" "${file}"
+          done
+
+          echo "=== Apply manifests (deploy.sh order) ==="
+          kubectl apply -f "${RENDER_DIR}/others/serviceaccount.yaml"
+          kubectl apply -f "${RENDER_DIR}/configs/configmap.yaml"
+          kubectl apply -f "${RENDER_DIR}/configs/secret.yaml"
+          kubectl apply -f "${RENDER_DIR}/workload/backend/service.yaml"
+          kubectl apply -f "${RENDER_DIR}/workload/backend/deployment.yaml"
+          kubectl apply -f "${RENDER_DIR}/workload/frontend/service.yaml"
+          kubectl apply -f "${RENDER_DIR}/workload/frontend/deployment.yaml"
+
+          kubectl delete job fortified-crm-fleet-seed -n "${NAMESPACE}" --ignore-not-found
+          kubectl apply -f "${RENDER_DIR}/workload/seed/job.yaml"
+
+          kubectl apply -f "${RENDER_DIR}/network/frontend.yaml"
+          kubectl apply -f "${RENDER_DIR}/network/managed-certificate.yaml"
+          kubectl apply -f "${RENDER_DIR}/network/ingress.yaml"
+
+          rm -rf "${RENDER_DIR}"
+
+          echo "=== Wait for core workloads ==="
+          kubectl rollout status deployment/backend -n "${NAMESPACE}" --timeout=300s
+          kubectl rollout status deployment/frontend -n "${NAMESPACE}" --timeout=300s
+          kubectl wait --for=condition=complete job/fortified-crm-fleet-seed -n "${NAMESPACE}" --timeout=900s
+
+          echo "=== Frontend service ==="
+          kubectl get svc frontend -n "${NAMESPACE}"
+
+          echo "=== Deployments / pods / ingress ==="
+          kubectl get deploy,pods,svc,ingress,job -n "${NAMESPACE}"
