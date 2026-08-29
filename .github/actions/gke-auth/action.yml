@@ -8,7 +8,7 @@ runs:
       uses: 'google-github-actions/auth@v3'
       with:
         service_account: 'deployment@agentic-hackerton.iam.gserviceaccount.com'
-        workload_identity_provider: 'projects/290585277729/locations/global/workloadIdentityPools/my-github-repo-provider/providers/repository'
+        workload_identity_provider: 'projects/290585277729/locations/global/workloadIdentityPools/my-github-repo-provider/providers/my-github-repo-provider'
 
 
     - name: Set up Cloud SDK
@@ -20,3 +20,10 @@ runs:
         gcloud components install gke-gcloud-auth-plugin
         gcloud container clusters get-credentials fortified-crm-fleet --region europe-west3 --project agentic-hackerton
         kubectl create namespace fortified-crm-fleet --dry-run=client -o yaml | kubectl apply -f -
+
+
+gcloud iam workload-identity-pools providers describe "my-github-repo-provider" \
+  --project="agentic-hackerton" \
+  --location="global" \
+  --workload-identity-pool="my-github-repo-provider" \
+  --format="value(name)"
