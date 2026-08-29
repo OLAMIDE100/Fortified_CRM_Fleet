@@ -20,10 +20,3 @@ runs:
         gcloud components install gke-gcloud-auth-plugin
         gcloud container clusters get-credentials fortified-crm-fleet --region europe-west3 --project agentic-hackerton
         kubectl create namespace fortified-crm-fleet --dry-run=client -o yaml | kubectl apply -f -
-
-
-gcloud iam workload-identity-pools providers describe "my-github-repo-provider" \
-  --project="agentic-hackerton" \
-  --location="global" \
-  --workload-identity-pool="my-github-repo-provider" \
-  --format="value(name)"
