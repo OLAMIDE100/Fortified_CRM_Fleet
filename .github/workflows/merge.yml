@@ -79,7 +79,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud and GKE
-        uses: .github/actions/gke-auth
+        uses: ./.github/actions/gke-auth
 
       - name: Render and apply manifests
         env:
