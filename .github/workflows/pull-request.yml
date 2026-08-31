@@ -19,7 +19,6 @@ jobs:
     name: Terraform Validate
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    needs: integration-test
     permissions:
       contents: 'read'
       id-token: 'write'
