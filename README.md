@@ -39,7 +39,7 @@ POST /api/v1/crm/run { action, lead_id | lead_ids }
   → load_lead_node
   → route by action
        ├─ outreach
-       │     qualify_lead_agent (gemini-2.5-flash)
+       │     qualify_lead_agent (gemini-3.5-flash)
        │       → score < 50 → update_crm → END
        │       → score ≥ 50 → loop (max 3):
        │            outreach_agent (gemini-2.5-pro + RAG tool)
@@ -121,11 +121,11 @@ europe-west3-docker.pkg.dev/<project>/fortified-crm-fleet/fortified-crm-fleet-se
 
 | Agent | Model (default) | Role |
 |-------|-----------------|------|
-| `qualify_lead_agent` | `gemini-2.5-flash` | Score 0–100 |
+| `qualify_lead_agent` | `gemini-3.5-flash` | Score 0–100 |
 | `outreach_agent` | `gemini-2.5-pro` | Draft email (+ optional RAG tool) |
-| `critic_evaluator_agent` | `gemini-2.5-flash` | Approve / feedback (≤3 revisions) |
-| `rag_transcript_agent` | `gemini-2.5-flash` | Sentiment, churn, issues |
-| `summarize_user_agent` | `gemini-2.5-flash` | Executive player briefing |
+| `critic_evaluator_agent` | `gemini-3.5-flash` | Approve / feedback (≤3 revisions) |
+| `rag_transcript_agent` | `gemini-3.5-flash` | Sentiment, churn, issues |
+| `summarize_user_agent` | `gemini-3.5-flash` | Executive player briefing |
 
 **Observability**
 
@@ -298,7 +298,7 @@ RAG retrieval (`helper_scripts/vector_search.py`) is also exposed as an ADK `Fun
 
 | Area | Choice |
 |------|--------|
-| Agents | Google ADK · Gemini 2.5 Flash / Pro |
+| Agents | Google ADK · Gemini 3.5 Flash / 2.5 Pro |
 | API | FastAPI · Uvicorn |
 | UI | React 19 · Vite · Tailwind · nginx |
 | Data | Postgres · pgvector · FastEmbed |
